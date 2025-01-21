@@ -1,18 +1,51 @@
+#!/usr/bin/env python3
+
 from argparse import ArgumentParser, Namespace
+from dataclasses import dataclass, field
 import subprocess
 import json
+import logging
+
+logging.basicConfig()
+logger = logging.getLogger()
+logger.level = logging.INFO
 
 
-def parse_arguments() -> Namespace:
+@dataclass
+class Argument:
+    name: str
+    filename: str
+    output: str
+
+
+@dataclass
+class FioTestResults:
+    iodepths: list[int] = field(default_factory=lambda: [
+                                1, 2, 4, 8, 16, 32, 64, 128, 256])
+    latency: dict[list[float]] = field(default_factory=lambda: {
+        "randread": [],
+        "randwrite": []
+    })
+
+    def add_latency(self, operation: str, latency: float):
+        self.latency[operation].append(latency)
+
+
+def parse_arguments() -> Argument:
     parser = ArgumentParser(prog='blktest', description="")
     parser.add_argument("-name", required=True)
     parser.add_argument("-filename", required=True)
     parser.add_argument("-output", required=True)
     args = parser.parse_args()
-    return args
+    return Argument(args.name, args.filename, args.output)
 
 
-def run_fio(name: str, filename: str) -> tuple[list[int], list[list[float]]]:
+def get_latency(data: str, rw: str) -> float:
+    return float(json.loads(data)[
+        'jobs'][0][rw[4:]]['lat_ns']['mean']) / 1e6
+
+
+def run_fio(name: str, filename: str) -> FioTestResults:
     command = [
         'fio',
         f'--name={name}',
@@ -26,28 +59,25 @@ def run_fio(name: str, filename: str) -> tuple[list[int], list[list[float]]]:
         '--output-format=json',
         '--group_reporting'
     ]
+    result = FioTestResults()
+    logger.info('Выполняется тест fio %s:', name)
+    for operation in ('randread', 'randwrite'):
+        logger.info('Операция: %s', operation)
+        for iodepth in result.iodepths:
+            test_result = subprocess.run(command + [f'--rw={operation}',
+                                                    f'--iodepth={iodepth}'], stdout=subprocess.PIPE, encoding="utf-8")
+            latency = get_latency(test_result.stdout, operation)
+            result.add_latency(operation, latency)
+            logger.info('Iodepth: %s Avg. latency: %s', iodepth, latency)
 
-    operations = ('read', 'write')
-    iodepths = [1, 2, 4, 8, 16, 32, 64, 128, 256]
-    latency = [[0] * len(iodepths) for _ in range(len(operations))]
-    print(f'Выполняется тест fio {name}:')
-    for i, rw in enumerate(operations):
-        print(f'\tОперация: {rw}rand')
-        for j, iodepth in enumerate(iodepths):
-            data = subprocess.run(command + [f'--rw=rand{rw}',
-                                             f'--iodepth={iodepth}'], stdout=subprocess.PIPE, encoding="utf-8")
-            latency[i][j] = float(json.loads(data.stdout)[
-                'jobs'][0][rw]['lat_ns']['mean']) / 1e6
-            print(f'\t\tIodepth: {iodepth} Latency: {latency[i][j]}')
-
-    print(f'Тест fio {name} завершен.')
-    return iodepths, latency
+    logger.info('Тест fio %s завершен.', name)
+    return result
 
 
-def write_data_in_file(iodepths: list[int], latency: list[list[float]]) -> str:
-    filename = 'data.dat'
+def write_data_in_file(result: FioTestResults) -> str:
+    filename = 'data.txt'
     with open(filename, "w") as f:
-        for x, y1, y2 in zip(iodepths, latency[0], latency[1]):
+        for x, y1, y2 in zip(result.iodepths, result.latency['randread'], result.latency['randwrite']):
             f.write(f"{x} {y1} {y2}\n")
 
     return filename
@@ -70,12 +100,12 @@ plot '{data_filename}' using 1:2 with linespoints lc rgb 'blue' title 'Randread'
 
     process = subprocess.Popen(["gnuplot"], stdin=subprocess.PIPE, text=True)
     process.communicate(gnuplot_script)
-    print(f'График {image_name} создан')
+    logger.info('График %s создан', image_name)
 
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    iodepths, latency = run_fio(args.name, args.filename)
-    filename = write_data_in_file(iodepths, latency)
+    args: Argument = parse_arguments()
+    results: FioTestResults = run_fio(args.name, args.filename)
+    filename = write_data_in_file(results)
     # filename = "data.dat"
     create_plot(filename, args.output)
