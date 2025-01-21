@@ -9,7 +9,8 @@
 - [gnuplot](http://www.gnuplot.info/)
 - Python 3
 
-## Установка
+## Установка и запуск
+### Локально
 1. Склонируйте репозиторий:
 ```bash
    git clone https://github.com/anemon-a/block-device-tester.git
@@ -17,28 +18,32 @@
    chmod +x blktest.py
 ```
 2. Установите зависимости, если они еще не установлены:
-```
-bash
+```bash
    sudo apt-get update
    sudo apt-get install fio gnuplot
 ```
-## Использование
 Для запуска теста используйте следующую команду:
-```
-bash
+```bash
 ./test -name=<имя_теста> -filename=<путь_к_блочному_устройству> -output=<имя_файладля_графика.png>
 ```
-### Параметры
+#### Параметры
 - -name: Имя теста.
 - -filename: Путь к блочному устройству или файлу, который вы хотите протестировать (например, /dev/sda или testfile).
 - -output: Имя выходного файла для графика (например, graph.png).
-### Пример
-```
-bash
+#### Пример
+```bash
 ./test -name=my_test -filename=/dev/sda -output=graph.png
 ```
+### Запуск в Docker
+1. Убедитесь, что у вас установлены [Docker](https://www.docker.com/get-started) и [Docker Compose](https://docs.docker.com/compose/install/).
+2. Склонируйте репозиторий и перейдите в директорию проекта:
+    ```bash
+    git clone https://github.com/anemon-a/block-device-tester.git
+    cd block-device-tester
+    ```
+3. Постройте и запустите контейнеры:
+    ```bash
+    docker-compose up --build
+    ```
 ## Результаты
 После завершения теста вы получите файл graph.png, который содержит график производительности блочного устройства.
-
-
-   
