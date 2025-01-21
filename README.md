@@ -34,16 +34,5 @@
 ```bash
 ./test -name=my_test -filename=/dev/sda -output=graph.png
 ```
-### Запуск в Docker
-1. Убедитесь, что у вас установлены [Docker](https://www.docker.com/get-started) и [Docker Compose](https://docs.docker.com/compose/install/).
-2. Склонируйте репозиторий и перейдите в директорию проекта:
-    ```bash
-    git clone https://github.com/anemon-a/block-device-tester.git
-    cd block-device-tester
-    ```
-3. Постройте и запустите контейнеры:
-    ```bash
-    docker-compose up --build
-    ```
 ## Результаты
 После завершения теста вы получите файл graph.png, который содержит график производительности блочного устройства.
