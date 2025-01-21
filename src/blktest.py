@@ -55,7 +55,7 @@ def run_fio(name: str, filename: str) -> FioTestResults:
         '--bs=4k',
         '--numjobs=1',
         '--size=1G',
-        '--runtime=5s',
+        '--runtime=15s',
         '--output-format=json',
         '--group_reporting'
     ]
@@ -86,7 +86,7 @@ def write_data_in_file(result: FioTestResults) -> str:
 def create_plot(data_filename: str, image_name: str) -> None:
     gnuplot_script = f"""
 set terminal pngcairo size 1000,600
-set output '{image_name}.png'
+set output '{image_name}'
 set title 'График зависимости latency от iodepth для операций randread и randwrite'
 set xlabel 'Iodepth'
 set ylabel 'Latency'
@@ -107,5 +107,4 @@ if __name__ == "__main__":
     args: Argument = parse_arguments()
     results: FioTestResults = run_fio(args.name, args.filename)
     filename = write_data_in_file(results)
-    # filename = "data.dat"
     create_plot(filename, args.output)
